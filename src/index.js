@@ -1,84 +1,50 @@
-import PixabayAPI from './js/fetchPixabay';
-import Notiflix from 'notiflix';
-import SimpleLightbox from "simplelightbox";
-import "simplelightbox/dist/simple-lightbox.min.css";
+import hitsCards from './templates/card-photos.hbs'
+import './css/styles.css'
 
-let lighbox = new SimpleLightbox('.photo-card a', {
-    captions: true,
-    captionsData: 'alt',
-    captionsDelay: 500,
-}) 
-
+// import SimpleLightbox from "simplelightbox";
+// import "simplelightbox/dist/simple-lightbox.min.css";
+import Notiflix from "notiflix";
+import FetchPixabay from './js/fetchPixabay';  
 
 const searchForm = document.querySelector('#search-form');
-const galleryPhotos = document.querySelector('.gallery');
+const btnSubmit = document.querySelector('button');
+const galleryCotainer = document.querySelector('.gallery');
 const btnLoadMore = document.querySelector('.load-more');
-const pixabayApi = new PixabayAPI();
-let isShown = 0;
+const galleryList = document.querySelector('.gallery-list')
+const newsApi = new FetchPixabay();
+btnLoadMore.classList.add('is-hidden')
+let totalHits = 0;
 
+// document.body.innerHTML = templateFunction();
 searchForm.addEventListener('submit', handleSearch);
 btnLoadMore.addEventListener('click', handleLoadMore);
 
+
 function handleSearch(event) {
     event.preventDefault();
-    galleryPhotos.innerHTML = '';
-    pixabayApi.query = event.currentTarget.elements.searchQuery.value.trim();
-    // pixabayApi.resetPage();
-    if (pixabayApi.query === '') {
-            return;
-    }
-    fetchGallery();
-    handleRenderGallery(hits);
-}
-async function fetchGallery() {
-    btnLoadMore.classList.add('is-hidden');
-    const quantityPhoto = await pixabayApi.fetchGallery;
-    const { hits, total } = quantityPhoto;
-    isShown += hits.length;
-    if (!hits.length) {
-        Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+        
+    clearHitsPhotos();
+    newsApi.query = event.currentTarget.elements.searchQuery.value.trim();
+    if (newsApi.query === '') {
         btnLoadMore.classList.add('is-hidden');
-        return;
+    return  Notiflix.Notify.warning('Please enter a search parameter')  
     }
-    handleRenderGallery(hits);
-    isShown += hits.length;
-    if (isShown < total) {
-        btnLoadMore.classList.remove('is-hidden');
-        Notiflix.Notify.success('Hooray! We found totalHits images.');
-    }
-    if (isShown >= total) {
-        Notiflix.Notify.info("We're sorry, but you've reached the end of search results.");
-        btnLoadMore.classList.add('is-hidden');
-    }
+    btnLoadMore.classList.remove('is-hidden')
+    newsApi.resetPage();
+    newsApi.fetchPixabayGallery().then(appendHitsMarkup);
+    
 }
 
 function handleLoadMore() {
-    fetchGallery();
+     
+    newsApi.fetchPixabayGallery().then(appendHitsMarkup)
+    
 }
-function handleRenderGallery(elements) {
-    const markup = elements.map(({ webformatURL, largeImageURL, tags, likes, views, comments, dowloads,
-    }) => {
-        return `
-        <a href="${largeImageURL}">
-        <div class="photo-card">
-  <img src="${webformatURL}" alt="${tags}" loading="lazy" />
-  <div class="info">
-    <p class="info-item">
-      <b>Likes</b>${likes}
-    </p>
-    <p class="info-item">
-      <b>Views</b>${views}
-    </p>
-    <p class="info-item">
-      <b>Comments</b>${comments}
-    </p>
-    <p class="info-item">
-      <b>Downloads</b>${dowloads}
-    </p>
-  </div>
-</div>
-</a>`
-    }).join('');
-    galleryPhotos.insertAdjacentHTML('beforeend', markup);
-    lighbox.refresh();
+
+function appendHitsMarkup(hits) {
+galleryList.insertAdjacentHTML('beforeend', hitsCards(hits))
+}
+
+function clearHitsPhotos() {
+    galleryList.innerHTML = '';
 }
